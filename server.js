@@ -1,18 +1,24 @@
+// ✅ server.js (Final working version for Zeabur)
 const express = require("express");
 const axios = require("axios");
+const path = require("path");
 const HttpsProxyAgent = require("https-proxy-agent");
+const { ytsearch, ytmp3 } = require("ruhend-scraper");
 const { Downloader } = require("abot-scraper");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const downloader = new Downloader();
 
+// 🛡 Proxy list
 const proxies = [
   "http://27.71.142.16:16000",
   "http://186.179.169.22:3128",
   "http://72.10.160.91:18749",
   "http://27.79.136.134:16000",
-  "http://18.203.249.67:10010"
+  "http://18.203.249.67:10010",
+  "http://43.217.134.23:3128",
+  "http://57.129.81.201:8080"
 ];
 
 function getRandomProxy() {
@@ -20,34 +26,50 @@ function getRandomProxy() {
   return new HttpsProxyAgent(proxy);
 }
 
+// ✅ /song?q=tum+hi+ho&type=audio
 app.get("/song", async (req, res) => {
   const query = req.query.q;
   const isVideo = req.query.type === "video";
+
   if (!query) return res.status(400).json({ error: "Missing query ?q=..." });
 
   try {
-    const results = await downloader.searchYoutube(query);
-    if (!results || results.length === 0)
+    const { video } = await ytsearch(query);
+    if (!video || video.length === 0) {
       return res.status(404).json({ error: "No result found" });
+    }
 
-    const selected = results[0];
-    const data = await downloader.youtubeDownloader(selected.url);
+    const selected = video[0];
+    let downloadUrl;
+    const ext = isVideo ? "mp4" : "mp3";
 
-    let downloadUrl = isVideo ? data.result.video : data.result.audio;
-    if (!downloadUrl) return res.status(500).json({ error: "Failed to fetch link" });
+    if (isVideo) {
+      const resVid = await downloader.youtubeDownloader(selected.url);
+      if (!resVid || resVid.status !== 200 || !resVid.result?.video) {
+        return res.status(500).json({ error: "Failed to fetch video URL" });
+      }
+      downloadUrl = resVid.result.video;
+    } else {
+      const audioRes = await ytmp3(selected.url);
+      if (!audioRes.audio || !audioRes.audio.startsWith("http")) {
+        return res.status(500).json({ error: "Failed to fetch MP3 link" });
+      }
+      downloadUrl = audioRes.audio;
+    }
 
+    // ⬇️ Download with stream and proxy
     const axiosOptions = {
       method: "GET",
       url: downloadUrl,
       responseType: "stream"
     };
 
+    // Only use proxy if not on Replit
     if (!process.env.REPL_ID) {
       axiosOptions.httpsAgent = getRandomProxy();
     }
 
     const response = await axios(axiosOptions);
-    const ext = isVideo ? "mp4" : "mp3";
     res.setHeader("Content-Disposition", `attachment; filename=download.${ext}`);
     response.data.pipe(res);
 
