@@ -1,15 +1,15 @@
 {
   "name": "yt-downloader-api",
   "version": "1.0.0",
-  "description": "YouTube audio/video downloader API",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
     "express": "^4.18.2",
-    "axios": "^1.6.8",
+    "axios": "^1.6.7",
     "https-proxy-agent": "^7.0.2",
-    "abot-scraper": "^1.0.4"
+    "abot-scraper": "^2.0.6",
+    "ruhend-scraper": "^1.1.6"
   }
 }
