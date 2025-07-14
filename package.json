@@ -1,5 +1,5 @@
 {
-  "name": "yt-downloader-api",
+  "name": "downloader-api",
   "version": "1.0.0",
   "description": "YouTube audio/video downloader API",
   "main": "server.js",
